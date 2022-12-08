@@ -58,3 +58,45 @@ Y_test = Y[split:]
 # Reshape the 1D arrays to 3D arrays to feed to model
 X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+# ----------------------
+# Creating the model
+# --------------------
+
+# Create the model
+inputs = tf.keras.layers.Input(shape = (X_train.shape[1], X_train.shape[2]))
+# Define LSTM network
+x_t = tf.keras.layers.LSTM(150, return_sequences=True)(inputs) # 150 neurons 
+x_t = tf.keras.layers.Dropout(0.3)(x_t)
+x_t = tf.keras.layers.LSTM(150, return_sequences=True)(x_t)
+x_t = tf.keras.layers.Dropout(0.3)(x_t)
+x_t = tf.keras.layers.LSTM(150)(x_t) 
+outputs = tf.keras.layers.Dense(1, activation = 'linear')(x_t)
+
+model = tf.keras.Model(inputs = inputs, outputs = outputs)
+model.compile(optimizer = 'adam', loss = 'mse')
+model.summary()
+
+# Train the model
+history = model.fit(X_train, Y_train, epochs=20, batch_size=32, validation_split=0.2) # increase epochs to reduce error
+
+# Make prediction
+predicted = model.predict(X)
+
+# Format the data for visual comparison
+test_predicted = []
+for i in predicted:
+    test_predicted.append(i[0])
+
+df_predicted = price_volume_df[1:][['Date']]
+df_predicted['Predicted Price'] = test_predicted
+
+close = []
+for i in training_set_scaled:
+    close.append(i[0])
+
+df_predicted['Close'] = close[1:]
+
+print(df_predicted)
+
+interactive_plot(df_predicted, 'Original Price vs LSTM Predictions')
